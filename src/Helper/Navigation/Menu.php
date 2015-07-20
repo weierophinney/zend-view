@@ -380,10 +380,10 @@ class Menu extends AbstractHelper
      * as-is, and will be available in the partial script as 'container', e.g.
      * <code>echo 'Number of pages: ', count($this->container);</code>.
      *
-     * @param  AbstractContainer     $container [optional] container to pass to view
+     * @param  null|AbstractContainer   $container [optional] container to pass to view
      *                                  script. Default is to use the container
      *                                  registered in the helper.
-     * @param  string|array  $partial   [optional] partial view script to use.
+     * @param  null|string|array $partial [optional] partial view script to use.
      *                                  Default is to use the partial
      *                                  registered in the helper. If an array
      *                                  is given, it is expected to contain two
@@ -396,41 +396,35 @@ class Menu extends AbstractHelper
      */
     public function renderPartial($container = null, $partial = null)
     {
-        $this->parseContainer($container);
-        if (null === $container) {
-            $container = $this->getContainer();
-        }
+        return $this->renderPartialModel([], $container, $partial);
+    }
 
-        if (null === $partial) {
-            $partial = $this->getPartial();
-        }
-
-        if (empty($partial)) {
-            throw new Exception\RuntimeException(
-                'Unable to render menu: No partial view script provided'
-            );
-        }
-
-        $model = [
-            'container' => $container
-        ];
-
-        /** @var \Zend\View\Helper\Partial $partialHelper */
-        $partialHelper = $this->view->plugin('partial');
-
-        if (is_array($partial)) {
-            if (count($partial) != 2) {
-                throw new Exception\InvalidArgumentException(
-                    'Unable to render menu: A view partial supplied as '
-                    .  'an array must contain two values: partial view '
-                    .  'script and module where script can be found'
-                );
-            }
-
-            return $partialHelper($partial[0], $model);
-        }
-
-        return $partialHelper($partial, $model);
+    /**
+     * Renders the given $container by invoking the partial view helper with the given parameters as the model.
+     *
+     * The container will simply be passed on as a model to the view script
+     * as-is, and will be available in the partial script as 'container', e.g.
+     * <code>echo 'Number of pages: ', count($this->container);</code>.
+     *
+     * Any parameters provided will be passed to the partial via the view model.
+     *
+     * @param  null|AbstractContainer   $container [optional] container to pass to view
+     *                                  script. Default is to use the container
+     *                                  registered in the helper.
+     * @param  null|string|array $partial [optional] partial view script to use.
+     *                                  Default is to use the partial
+     *                                  registered in the helper. If an array
+     *                                  is given, it is expected to contain two
+     *                                  values; the partial view script to use,
+     *                                  and the module where the script can be
+     *                                  found.
+     * @return string
+     * @throws Exception\RuntimeException if no partial provided
+     * @throws Exception\InvalidArgumentException if partial is invalid array
+     */
+    public function renderPartialWithParams(array $params = [], $container = null, $partial = null)
+    {
+        return $this->renderPartialModel($params, $container, $partial);
     }
 
     /**
@@ -765,5 +759,52 @@ class Menu extends AbstractHelper
     public function getLiActiveClass()
     {
         return $this->liActiveClass;
+    }
+
+    /**
+     * Render a partial with the given "model".
+     *
+     * @param array $params
+     * @param null|AbstractContainer $container
+     * @param null|string|array $partial
+     * @return string
+     * @throws Exception\RuntimeException if no partial provided
+     * @throws Exception\InvalidArgumentException if partial is invalid array
+     */
+    protected function renderPartialModel(array $params, $container, $partial)
+    {
+        $this->parseContainer($container);
+        if (null === $container) {
+            $container = $this->getContainer();
+        }
+
+        if (null === $partial) {
+            $partial = $this->getPartial();
+        }
+
+        if (empty($partial)) {
+            throw new Exception\RuntimeException(
+                'Unable to render menu: No partial view script provided'
+            );
+        }
+
+        $model = array_merge($params, ['container' => $container]);
+
+        /** @var \Zend\View\Helper\Partial $partialHelper */
+        $partialHelper = $this->view->plugin('partial');
+
+        if (is_array($partial)) {
+            if (count($partial) != 2) {
+                throw new Exception\InvalidArgumentException(
+                    'Unable to render menu: A view partial supplied as '
+                    .  'an array must contain two values: partial view '
+                    .  'script and module where script can be found'
+                );
+            }
+
+            return $partialHelper($partial[0], $model);
+        }
+
+        return $partialHelper($partial, $model);
     }
 }
